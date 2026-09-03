@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: job-portal-postgres
+    environment:
+      POSTGRES_USER: jobportal
+      POSTGRES_PASSWORD: jobportal
+      POSTGRES_DB: jobportal
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobportal -d jobportal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: job-portal-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: job-portal-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb -p local/resumes;
+      mc anonymous set none local/resumes;
+      echo 'MinIO bucket ready';
+      "
+
+  app:
+    profiles: ["app"]
+    build: .
+    container_name: job-portal-app
+    ports:
+      - "3000:3000"
+    environment:
+      PRACTICE_NAME: Bright Smile Dental
+      NEXTAUTH_SECRET: replace-with-a-long-random-string
+      NEXTAUTH_URL: http://admin.localhost:3000
+      PUBLIC_APP_URL: http://localhost:3000
+      ADMIN_APP_URL: http://admin.localhost:3000
+      DATABASE_URL: postgresql://jobportal:jobportal@postgres:5432/jobportal?schema=public
+      S3_BUCKET: resumes
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+volumes:
+  pgdata:
+  miniodata:

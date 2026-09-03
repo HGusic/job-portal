@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  draft
+  published
+  closed
+}
+
+enum QuestionType {
+  short_text
+  long_text
+  yes_no
+  dropdown
+}
+
+model AdminUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  jobs         Job[]
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admin_users")
+}
+
+model Job {
+  id                           String    @id @default(uuid()) @db.Uuid
+  title                        String    @default("")
+  location                     String    @default("")
+  jobSummary                   String    @default("") @map("job_summary") @db.Text
+  responsibilities             String    @default("") @db.Text
+  requiredQualifications       String    @default("") @map("required_qualifications") @db.Text
+  preferredQualifications      String    @default("") @map("preferred_qualifications") @db.Text
+  includeTitle                 Boolean   @default(true) @map("include_title")
+  includeLocation              Boolean   @default(true) @map("include_location")
+  includeJobSummary            Boolean   @default(true) @map("include_job_summary")
+  includeResponsibilities      Boolean   @default(true) @map("include_responsibilities")
+  includeRequiredQualifications Boolean  @default(true) @map("include_required_qualifications")
+  includePreferredQualifications Boolean @default(true) @map("include_preferred_qualifications")
+  status                       JobStatus @default(draft)
+  publishedAt                  DateTime? @map("published_at")
+  createdById                  String    @map("created_by_id") @db.Uuid
+  createdBy                    AdminUser @relation(fields: [createdById], references: [id])
+  questions                    JobQuestion[]
+  applications                 Application[]
+  createdAt                    DateTime  @default(now()) @map("created_at")
+  updatedAt                    DateTime  @updatedAt @map("updated_at")
+
+  @@map("jobs")
+}
+
+model JobQuestion {
+  id           String              @id @default(uuid()) @db.Uuid
+  jobId        String              @map("job_id") @db.Uuid
+  job          Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  prompt       String
+  questionType QuestionType        @map("question_type")
+  required     Boolean             @default(true)
+  sortOrder    Int                 @map("sort_order")
+  options      Json?
+  answers      ApplicationAnswer[]
+
+  @@index([jobId, sortOrder])
+  @@map("job_questions")
+}
+
+model Application {
+  id          String              @id @default(uuid()) @db.Uuid
+  jobId       String              @map("job_id") @db.Uuid
+  job         Job                 @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  firstName   String              @map("first_name")
+  middleName  String?             @map("middle_name")
+  lastName    String              @map("last_name")
+  email       String
+  phone       String
+  address     String
+  zipCode     String              @map("zip_code")
+  state       String
+  resumeKey   String              @map("resume_key")
+  submittedAt DateTime            @default(now()) @map("submitted_at")
+  answers     ApplicationAnswer[]
+
+  @@index([jobId])
+  @@map("applications")
+}
+
+model ApplicationAnswer {
+  id            String      @id @default(uuid()) @db.Uuid
+  applicationId String      @map("application_id") @db.Uuid
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  jobQuestionId String      @map("job_question_id") @db.Uuid
+  jobQuestion   JobQuestion @relation(fields: [jobQuestionId], references: [id], onDelete: Restrict)
+  answerText    String      @map("answer_text") @db.Text
+
+  @@unique([applicationId, jobQuestionId])
+  @@map("application_answers")
+}
