@@ -35,7 +35,7 @@ Optional Lightsail-style check: `docker compose --profile app up --build`.
 
 - Public jobs: http://localhost:3000
 - Employer portal: http://admin.localhost:3000/admin/login  
-  Seed credentials: `1@1` / `1`
+  Seed credentials: `kidzandteendental@orthodontics` / `kidzandteendental`
   (`admin.localhost` points at your machine; bookmark this URL — it is not linked from the public site.)
 - MinIO console: http://localhost:9001 (`minioadmin` / `minioadmin`)
 

@@ -18,18 +18,20 @@ function s3() {
 }
 
 async function main() {
-  const email = (process.env.ADMIN_EMAIL ?? "1@1").toLowerCase();
-  const password = process.env.ADMIN_PASSWORD ?? "1";
+  const email = (process.env.ADMIN_EMAIL ?? "kidzandteendental@orthodontics").toLowerCase();
+  const password = process.env.ADMIN_PASSWORD ?? "kidzandteendental";
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const previous = await prisma.adminUser.findUnique({
-    where: { email: "admin@brightsmile.local" },
-  });
-  if (previous && previous.email !== email) {
-    await prisma.adminUser.update({
-      where: { id: previous.id },
-      data: { email, passwordHash },
-    });
+  const legacyEmails = ["admin@brightsmile.local", "1@1"];
+  for (const legacy of legacyEmails) {
+    if (legacy === email) continue;
+    const previous = await prisma.adminUser.findUnique({ where: { email: legacy } });
+    if (previous) {
+      await prisma.adminUser.update({
+        where: { id: previous.id },
+        data: { email, passwordHash },
+      });
+    }
   }
 
   const admin = await prisma.adminUser.upsert({

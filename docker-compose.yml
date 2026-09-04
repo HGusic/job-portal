@@ -58,7 +58,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      PRACTICE_NAME: Bright Smile Dental
+      PRACTICE_NAME: Kidz and Teen Dental + Orthodontics
       NEXTAUTH_SECRET: replace-with-a-long-random-string
       NEXTAUTH_URL: http://admin.localhost:3000
       PUBLIC_APP_URL: http://localhost:3000
